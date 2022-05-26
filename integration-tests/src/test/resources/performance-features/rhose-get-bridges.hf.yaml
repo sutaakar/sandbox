@@ -1,0 +1,42 @@
+name: rhose-get-bridges
+http:
+  host: <manager URL>
+  sharedConnections: 100
+phases:
+- bridgeListingUser:
+    constantRate:
+      duration: 30s
+      usersPerSec: 10
+      scenario:
+      - test:
+        - httpRequest:
+            GET: /api/v1/bridges
+            headers:
+              authorization: Bearer <token>
+- bridgeCreatingUser:
+    constantRate:
+      duration: 30s
+      usersPerSec: 1
+      scenario:
+      - create:
+        - randomUUID: bridgeNameSuffix
+        - httpRequest:
+            POST: /api/v1/bridges
+            body: |
+              {
+                "name": "perf-${bridgeNameSuffix}"
+              }
+            headers:
+              content-type: application/json
+              authorization: Bearer <token>
+            handler:
+              body:
+                json:
+                  query: .id
+                  toVar: test
+        - log:
+            message: "Id is: {}"
+            vars: [ test ]
+        # Artificial wait to avoid https://issues.redhat.com/browse/MGDOBR-750
+        - thinkTime:
+            duration: 5s
